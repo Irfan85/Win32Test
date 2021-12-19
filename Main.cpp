@@ -24,7 +24,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, in
 	while (GetMessageW(&msg, NULL, NULL, NULL))
 	{
 		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		DispatchMessageW(&msg);
 	}
 
 	return 0;
