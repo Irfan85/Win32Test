@@ -10,9 +10,11 @@
 LRESULT CALLBACK myWindowProcedure(HWND, UINT, WPARAM, LPARAM);
 void addMenus(HWND);
 void addControls(HWND);
+void loadImages();
 
 HMENU gMainWindowMenu;
 HWND gNameEditText, gAgeEditText, gOutputEditText;
+HBITMAP gIconImage, gGenerateImage;
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, int cmdShow)
 {
@@ -47,6 +49,7 @@ LRESULT CALLBACK myWindowProcedure(HWND windowHandle, UINT message, WPARAM wp, L
 	switch (message)
 	{
 	case WM_CREATE:
+		loadImages();
 		addMenus(windowHandle);
 		addControls(windowHandle);
 		break;
@@ -127,8 +130,20 @@ void addControls(HWND windowHandle)
 	CreateWindowW(L"Static", L"Age :", WS_VISIBLE | WS_CHILD, 100, 90, 98, 38, windowHandle, NULL, NULL, NULL);
 	gAgeEditText = CreateWindowW(L"Edit", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 200, 90, 98, 38, windowHandle, NULL, NULL, NULL);
 
-	CreateWindowW(L"Button", L"Generate", WS_VISIBLE | WS_CHILD, 150, 140, 98, 38, windowHandle, (HMENU) GENERATE_BUTTON_CLICKED, NULL, NULL);
+	HWND generateButton = CreateWindowW(L"Button", L"", WS_VISIBLE | WS_CHILD | BS_BITMAP, 150, 140, 98, 38, windowHandle, (HMENU) GENERATE_BUTTON_CLICKED, NULL, NULL);
+	SendMessageW(generateButton, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)gGenerateImage);
 
 	gOutputEditText = CreateWindowW(L"Edit", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 200, 300, 200, windowHandle, NULL, NULL, NULL);
 
+	HWND iconImageWindow = CreateWindowW(L"Static", L"", WS_VISIBLE | WS_CHILD | SS_BITMAP, 350, 60, 100, 100, windowHandle,  NULL, NULL, NULL);
+	// We need to send a message to the image window in order to set an image to it
+	SendMessageW(iconImageWindow, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)gIconImage);
+}
+
+void loadImages()
+{
+	// We will scale this image to 100X100 pixels. Use 0 in these places to keep the default image size
+	gIconImage = (HBITMAP)LoadImageW(NULL, L"icon.bmp", IMAGE_BITMAP, 100, 100, LR_LOADFROMFILE);
+
+	gGenerateImage = (HBITMAP)LoadImage(NULL, L"button.bmp", IMAGE_BITMAP, 98, 38, LR_LOADFROMFILE);
 }
