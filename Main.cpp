@@ -3,7 +3,7 @@
 #define NEW_FILE_MENU_ID 1
 #define OPEN_FILE_MENU_ID 2
 #define EXIT_FILE_MENU_ID 3
-#define CHANGE_TITLE_SEETINGS_MENU_ID 4
+#define CHANGE_TITLE 4
 
 LRESULT CALLBACK myWindowProcedure(HWND, UINT, WPARAM, LPARAM);
 void addMenus(HWND);
@@ -57,7 +57,7 @@ LRESULT CALLBACK myWindowProcedure(HWND windowHandle, UINT message, WPARAM wp, L
 		case OPEN_FILE_MENU_ID:
 			MessageBeep(MB_ICONINFORMATION);
 			break;
-		case CHANGE_TITLE_SEETINGS_MENU_ID:
+		case CHANGE_TITLE:
 			wchar_t text[100]; // We're assumming user input won't exceed 100 characters
 			GetWindowTextW(gEditText, text, 100);
 			SetWindowTextW(windowHandle, text); // For the main window, setting text means setting the title
@@ -85,7 +85,7 @@ void addMenus(HWND windowHandle)
 	AppendMenuW(fileMenu, MF_STRING, OPEN_FILE_MENU_ID, L"Open");
 
 	HMENU settingsMenu = CreateMenu();
-	AppendMenuW(settingsMenu, MF_STRING, CHANGE_TITLE_SEETINGS_MENU_ID, L"Change Window Title");
+	AppendMenuW(settingsMenu, MF_STRING, CHANGE_TITLE, L"Change Window Title");
 	AppendMenuW(fileMenu, MF_POPUP, (UINT_PTR) settingsMenu, L"Settings");
 	
 	AppendMenuW(fileMenu, MF_SEPARATOR, NULL, NULL);
@@ -109,4 +109,6 @@ void addControls(HWND windowHandle)
 	CreateWindowW(L"Static", L"Enter text here: ", WS_VISIBLE | WS_CHILD | WS_BORDER | SS_CENTER, 200, 100, 100, 50, windowHandle, NULL, NULL, NULL);
 
 	gEditText = CreateWindowW(L"Edit", L"Edit here", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL, 200, 152, 100, 50, windowHandle, NULL, NULL, NULL);
+
+	CreateWindowW(L"Button", L"Change Title", WS_VISIBLE | WS_CHILD, 200, 204, 100, 50, windowHandle, (HMENU) CHANGE_TITLE, NULL, NULL);
 }
