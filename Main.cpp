@@ -80,15 +80,37 @@ LRESULT CALLBACK myWindowProcedure(HWND windowHandle, UINT message, WPARAM wp, L
 			GetWindowTextW(gNameEditText, name, 30);
 			GetWindowTextW(gAgeEditText, age, 30);
 
+			if (wcscmp(name, L"") == 0 || wcscmp(age, L"") == 0)
+			{
+				int userResposne = MessageBoxW(windowHandle, L"Input can't be empty", L"Input Error", MB_ABORTRETRYIGNORE | MB_ICONERROR);
+				
+				switch (userResposne)
+				{
+				case IDABORT:
+					DestroyWindow(windowHandle);
+					break;
+				case IDRETRY:
+					return 0; // Just get out of the procedure function and do nothing
+				case IDIGNORE:
+					break; // User wants to proceed with empty data so get out of the switch statement and continue operatoin
+				}
+			}
+
 			wcscpy_s(output, name);
 			wcscat_s(output, L" is ");
 			wcscat_s(output, age);
 			wcscat_s(output, L" years old.");
 
 			SetWindowTextW(gOutputEditText, output);
+
 			break;
 		case EXIT_FILE_MENU_ID:
-			DestroyWindow(windowHandle);
+			int userResponse = MessageBoxW(windowHandle, L"Do you really want to close the application?", L"Are you sure?", MB_YESNO | MB_ICONEXCLAMATION);
+			if (userResponse == IDYES)
+			{
+				DestroyWindow(windowHandle);
+			}
+			
 			break;
 		}
 
