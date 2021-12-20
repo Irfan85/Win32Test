@@ -1,16 +1,18 @@
 #include <windows.h>
+#include <string.h>
+#include <wchar.h>
 
 #define NEW_FILE_MENU_ID 1
 #define OPEN_FILE_MENU_ID 2
 #define EXIT_FILE_MENU_ID 3
-#define CHANGE_TITLE 4
+#define GENERATE_BUTTON_CLICKED 4
 
 LRESULT CALLBACK myWindowProcedure(HWND, UINT, WPARAM, LPARAM);
 void addMenus(HWND);
 void addControls(HWND);
 
 HMENU gMainWindowMenu;
-HWND gEditText;
+HWND gNameEditText, gAgeEditText, gOutputEditText;
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, int cmdShow)
 {
@@ -57,10 +59,30 @@ LRESULT CALLBACK myWindowProcedure(HWND windowHandle, UINT message, WPARAM wp, L
 		case OPEN_FILE_MENU_ID:
 			MessageBeep(MB_ICONINFORMATION);
 			break;
-		case CHANGE_TITLE:
-			wchar_t text[100]; // We're assumming user input won't exceed 100 characters
-			GetWindowTextW(gEditText, text, 100);
-			SetWindowTextW(windowHandle, text); // For the main window, setting text means setting the title
+		case GENERATE_BUTTON_CLICKED:
+			// Using ASCII functions provided in c "string.h" header file
+			/*char name[30], age[30], output[50];
+			GetWindowTextA(gNameEditText, name, 30);
+			GetWindowTextA(gAgeEditText, age, 30);
+
+			strcpy_s(output, name);
+			strcat_s(output, " is ");
+			strcat_s(output, age);
+			strcat_s(output, " years old.");
+
+			SetWindowTextA(gOutputEditText, output);*/
+
+			// Using UNICODE functions provided in c "wchar.h" header file
+			wchar_t name[30], age[30], output[50];
+			GetWindowTextW(gNameEditText, name, 30);
+			GetWindowTextW(gAgeEditText, age, 30);
+
+			wcscpy_s(output, name);
+			wcscat_s(output, L" is ");
+			wcscat_s(output, age);
+			wcscat_s(output, L" years old.");
+
+			SetWindowTextW(gOutputEditText, output);
 			break;
 		case EXIT_FILE_MENU_ID:
 			DestroyWindow(windowHandle);
@@ -85,7 +107,7 @@ void addMenus(HWND windowHandle)
 	AppendMenuW(fileMenu, MF_STRING, OPEN_FILE_MENU_ID, L"Open");
 
 	HMENU settingsMenu = CreateMenu();
-	AppendMenuW(settingsMenu, MF_STRING, CHANGE_TITLE, L"Change Window Title");
+	AppendMenuW(settingsMenu, MF_STRING, NULL, L"Change Window Title");
 	AppendMenuW(fileMenu, MF_POPUP, (UINT_PTR) settingsMenu, L"Settings");
 	
 	AppendMenuW(fileMenu, MF_SEPARATOR, NULL, NULL);
@@ -99,16 +121,14 @@ void addMenus(HWND windowHandle)
 
 void addControls(HWND windowHandle)
 {
-	/*	In Win32 API, the controls are also considered as "Window" but these window are set up as the
-		children of the main window (The actual window). These controls can be of 2 type.
-		1. Static control: User can't change these. For example: Label
-		2. Edit control: User can change these. For example: Text box
-		The Classess for these controls are already defined in the API so we don't have to register them before
-		their creation unlike main windows. They can be created just by calling the "CreateWinow()" function
-	*/
-	CreateWindowW(L"Static", L"Enter text here: ", WS_VISIBLE | WS_CHILD | WS_BORDER | SS_CENTER, 200, 100, 100, 50, windowHandle, NULL, NULL, NULL);
+	CreateWindowW(L"Static", L"Name :", WS_VISIBLE | WS_CHILD, 100, 50, 98, 38, windowHandle, NULL, NULL, NULL);
+	gNameEditText = CreateWindowW(L"Edit", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 200, 50, 98, 38, windowHandle, NULL, NULL, NULL);
 
-	gEditText = CreateWindowW(L"Edit", L"Edit here", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL, 200, 152, 100, 50, windowHandle, NULL, NULL, NULL);
+	CreateWindowW(L"Static", L"Age :", WS_VISIBLE | WS_CHILD, 100, 90, 98, 38, windowHandle, NULL, NULL, NULL);
+	gAgeEditText = CreateWindowW(L"Edit", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 200, 90, 98, 38, windowHandle, NULL, NULL, NULL);
 
-	CreateWindowW(L"Button", L"Change Title", WS_VISIBLE | WS_CHILD, 200, 204, 100, 50, windowHandle, (HMENU) CHANGE_TITLE, NULL, NULL);
+	CreateWindowW(L"Button", L"Generate", WS_VISIBLE | WS_CHILD, 150, 140, 98, 38, windowHandle, (HMENU) GENERATE_BUTTON_CLICKED, NULL, NULL);
+
+	gOutputEditText = CreateWindowW(L"Edit", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 200, 300, 200, windowHandle, NULL, NULL, NULL);
+
 }
