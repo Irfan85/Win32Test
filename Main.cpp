@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <string.h>
 #include <wchar.h>
+#include <stdio.h>
 
 #define NEW_FILE_MENU_ID 1
 #define OPEN_FILE_MENU_ID 2
@@ -15,6 +16,8 @@ void loadImages();
 void registerDialogWindowClass(HINSTANCE);
 void displayDialogWindow(HWND);
 LRESULT CALLBACK dialogWindowProcedure(HWND, UINT, WPARAM, LPARAM);
+void openFileDialog(HWND);
+void displayFileContent(wchar_t*);
 
 HMENU gMainWindowMenu;
 HWND gMainWindow, gNameEditText, gAgeEditText, gOutputEditText;
@@ -58,15 +61,16 @@ LRESULT CALLBACK myWindowProcedure(HWND windowHandle, UINT message, WPARAM wp, L
 		loadImages();
 		addMenus(windowHandle);
 		addControls(windowHandle);
-		displayDialogWindow(windowHandle);
 		break;
 	case WM_COMMAND:
 		switch (wp)
 		{
 		case NEW_FILE_MENU_ID:
+			displayDialogWindow(windowHandle);
 			MessageBeep(MB_OK);
 			break;
 		case OPEN_FILE_MENU_ID:
+			openFileDialog(windowHandle);
 			MessageBeep(MB_ICONINFORMATION);
 			break;
 		case GENERATE_BUTTON_CLICKED:
@@ -162,7 +166,7 @@ void addControls(HWND windowHandle)
 	HWND generateButton = CreateWindowW(L"Button", L"", WS_VISIBLE | WS_CHILD | BS_BITMAP, 150, 140, 98, 38, windowHandle, (HMENU) GENERATE_BUTTON_CLICKED, NULL, NULL);
 	SendMessageW(generateButton, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)gGenerateImage);
 
-	gOutputEditText = CreateWindowW(L"Edit", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 200, 300, 200, windowHandle, NULL, NULL, NULL);
+	gOutputEditText = CreateWindowW(L"Edit", L"", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL, 100, 200, 300, 200, windowHandle, NULL, NULL, NULL);
 
 	HWND iconImageWindow = CreateWindowW(L"Static", L"", WS_VISIBLE | WS_CHILD | SS_BITMAP, 350, 60, 100, 100, windowHandle,  NULL, NULL, NULL);
 	// We need to send a message to the image window in order to set an image to it
@@ -225,4 +229,73 @@ LRESULT CALLBACK dialogWindowProcedure(HWND windowHandle, UINT message, WPARAM w
 	default:
 		return DefWindowProcW(windowHandle, message, wp, lp);
 	}
+}
+
+void openFileDialog(HWND windowHandle)
+{
+	OPENFILENAME ofn; // This structure is needed to construct the open file dialog
+
+	wchar_t fileName[100];
+	// Initialize the first character of the string as null terminated character because we don't want
+	// any files to be selected by default
+	fileName[0] = '\0';
+
+	ZeroMemory(&ofn, sizeof(OPENFILENAME)); // This Win32 macro will initialize the given memory addess of the given size with zeros
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = windowHandle;
+	ofn.lpstrFile = fileName; // Store the fetched file's path in the "fileName" variable
+	ofn.nMaxFile = 100; // We have choosen 100 as the length of "fileName"
+	// Filter format: String+Null terminator(\0)+ Regex of file type + \0 and keep repeating this
+	ofn.lpstrFilter = L"All files\0*.*\0Source files\0*.cpp\0Text files\0*.txt\0";
+	ofn.nFilterIndex = 1; // Select the first element of filter list by default. Yes it starts with 1 instead of 0
+
+	GetOpenFileNameW(&ofn);
+
+	OutputDebugStringW(fileName); // Just for debug purpose
+
+	displayFileContent(fileName);
+}
+
+void displayFileContent(wchar_t* fileName)
+{
+	FILE* file;
+	// This is just the unicode compatible version of fopen_s. We'll read the file in binary mode to 
+	// read it byte by byte
+	_wfopen_s(&file, fileName, L"rb");
+
+	if (file == NULL)
+	{
+		OutputDebugStringW(L"ERROR: Failed to load file.");
+		return;
+	}
+
+	// Now we have to determine the size of the file
+	// At first, we will seek the cursor to the end of the file
+	fseek(file, 0, SEEK_END);
+	// Then, we'll determine the current position of the cursor
+	// This will give us the file size
+	size_t fileSize = ftell(file);
+
+	// Now lets get back to the beginning of the file in order to read the contents
+	rewind(file);
+
+	// C89, which is the current standard of MSVC doesn't support variables while declaring array
+	// size. So, we have to take help from C++
+	wchar_t* fileData = new wchar_t[fileSize + 1];
+
+	for(int c = 0; c < fileSize; c++)
+	{
+		// We're reading the file in ascii mode since wchar_t was acting wired while reading file. Maybe some encoding issue of UTF-8 and UTF-16
+		// Anyways use of wchar_t is discouraged in mordern c/c++ versions
+		char character = (char)fgetc(file);
+
+		fileData[c] = character;
+	}
+
+	// Specify the last character of the file as the null terminator just to be sure and to avoid errors
+	fileData[fileSize] = '\0';
+
+	//OutputDebugStringW(fileData);
+	SetWindowTextW(gOutputEditText, fileData);
 }
