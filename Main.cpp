@@ -8,6 +8,7 @@
 #define EXIT_FILE_MENU_ID 3
 #define GENERATE_BUTTON_CLICKED 4
 #define DIALOG_CLOSE 5
+#define SAVE_FILE_MENU_ID 6
 
 LRESULT CALLBACK myWindowProcedure(HWND, UINT, WPARAM, LPARAM);
 void addMenus(HWND);
@@ -18,6 +19,8 @@ void displayDialogWindow(HWND);
 LRESULT CALLBACK dialogWindowProcedure(HWND, UINT, WPARAM, LPARAM);
 void openFileDialog(HWND);
 void displayFileContent(wchar_t*);
+void saveFileDialog(HWND);
+void writeToFile(wchar_t*);
 
 HMENU gMainWindowMenu;
 HWND gMainWindow, gNameEditText, gAgeEditText, gOutputEditText;
@@ -72,6 +75,9 @@ LRESULT CALLBACK myWindowProcedure(HWND windowHandle, UINT message, WPARAM wp, L
 		case OPEN_FILE_MENU_ID:
 			openFileDialog(windowHandle);
 			MessageBeep(MB_ICONINFORMATION);
+			break;
+		case SAVE_FILE_MENU_ID:
+			saveFileDialog(windowHandle);
 			break;
 		case GENERATE_BUTTON_CLICKED:
 			// Using ASCII functions provided in c "string.h" header file
@@ -141,6 +147,7 @@ void addMenus(HWND windowHandle)
 	HMENU fileMenu = CreateMenu();
 	AppendMenuW(fileMenu, MF_STRING, NEW_FILE_MENU_ID, L"New");
 	AppendMenuW(fileMenu, MF_STRING, OPEN_FILE_MENU_ID, L"Open");
+	AppendMenuW(fileMenu, MF_STRING, SAVE_FILE_MENU_ID, L"Save");
 
 	HMENU settingsMenu = CreateMenu();
 	AppendMenuW(settingsMenu, MF_STRING, NULL, L"Change Window Title");
@@ -166,7 +173,7 @@ void addControls(HWND windowHandle)
 	HWND generateButton = CreateWindowW(L"Button", L"", WS_VISIBLE | WS_CHILD | BS_BITMAP, 150, 140, 98, 38, windowHandle, (HMENU) GENERATE_BUTTON_CLICKED, NULL, NULL);
 	SendMessageW(generateButton, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)gGenerateImage);
 
-	gOutputEditText = CreateWindowW(L"Edit", L"", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL, 100, 200, 300, 200, windowHandle, NULL, NULL, NULL);
+	gOutputEditText = CreateWindowW(L"Edit", L"", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | WS_HSCROLL| ES_MULTILINE, 100, 200, 300, 200, windowHandle, NULL, NULL, NULL);
 
 	HWND iconImageWindow = CreateWindowW(L"Static", L"", WS_VISIBLE | WS_CHILD | SS_BITMAP, 350, 60, 100, 100, windowHandle,  NULL, NULL, NULL);
 	// We need to send a message to the image window in order to set an image to it
@@ -281,7 +288,8 @@ void displayFileContent(wchar_t* fileName)
 	rewind(file);
 
 	// C89, which is the current standard of MSVC doesn't support variables while declaring array
-	// size. So, we have to take help from C++
+	// size. So, we have to take help from C++. We're adding an extra space for the NULL terminated character 
+	// that we'll add at the end of the file ourselves to avoid any kind of unexpected behaviour
 	wchar_t* fileData = new wchar_t[fileSize + 1];
 
 	for(int c = 0; c < fileSize; c++)
@@ -293,9 +301,63 @@ void displayFileContent(wchar_t* fileName)
 		fileData[c] = character;
 	}
 
+	fclose(file);
+
 	// Specify the last character of the file as the null terminator just to be sure and to avoid errors
 	fileData[fileSize] = '\0';
 
 	//OutputDebugStringW(fileData);
 	SetWindowTextW(gOutputEditText, fileData);
 }
+
+void saveFileDialog(HWND windowHandle)
+{
+	OPENFILENAME ofn;
+
+	wchar_t fileName[100];
+	fileName[0] = '\0';
+
+	ZeroMemory(&ofn, sizeof(OPENFILENAME));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = windowHandle;
+	ofn.lpstrFile = fileName;
+	ofn.nMaxFile = 100;
+	ofn.lpstrFilter = L"All files\0*.*\0Source files\0*.cpp\0Text files\0*.txt\0";
+	ofn.nFilterIndex = 1;
+
+	GetSaveFileNameW(&ofn);
+
+	writeToFile(fileName);
+}
+
+void writeToFile(wchar_t* fileName)
+{
+
+	int dataSize = GetWindowTextLengthW(gOutputEditText);
+	wchar_t* data = new wchar_t[dataSize + 1]; // Add 1 for the null terminator that the "GetWindowTextLengthW()" doesn't count
+	GetWindowTextW(gOutputEditText, data, dataSize + 1);
+	
+	FILE* file;
+	_wfopen_s(&file, fileName, L"w");
+
+	if (file == NULL)
+	{
+		OutputDebugStringW(L"Failed to write fo file");
+		return;
+	}
+
+
+	for (int c = 0; c < (dataSize + 1); c++)
+	{
+		char character = (char)data[c];
+
+		// The app repeats newline characters.However the app ignores new line 
+		// when it itself tries to display it. Again could but the encoding issue so better avoid wchar_t
+		fputc(character, file);
+		
+	}
+
+	fclose(file);
+}
+
