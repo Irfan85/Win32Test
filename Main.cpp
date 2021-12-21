@@ -6,14 +6,18 @@
 #define OPEN_FILE_MENU_ID 2
 #define EXIT_FILE_MENU_ID 3
 #define GENERATE_BUTTON_CLICKED 4
+#define DIALOG_CLOSE 5
 
 LRESULT CALLBACK myWindowProcedure(HWND, UINT, WPARAM, LPARAM);
 void addMenus(HWND);
 void addControls(HWND);
 void loadImages();
+void registerDialogWindowClass(HINSTANCE);
+void displayDialogWindow(HWND);
+LRESULT CALLBACK dialogWindowProcedure(HWND, UINT, WPARAM, LPARAM);
 
 HMENU gMainWindowMenu;
-HWND gNameEditText, gAgeEditText, gOutputEditText;
+HWND gMainWindow, gNameEditText, gAgeEditText, gOutputEditText;
 HBITMAP gIconImage, gGenerateImage;
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, int cmdShow)
@@ -31,7 +35,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, in
 		return -1;
 	}
 
-	CreateWindowW(L"myWindowClass", L"My Window Title", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 500, 500, NULL, NULL, NULL, NULL);
+	registerDialogWindowClass(instance);
+
+	gMainWindow = CreateWindowW(L"myWindowClass", L"My Window Title", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 500, 500, NULL, NULL, NULL, NULL);
 
 	MSG msg = { 0 };
 
@@ -52,6 +58,7 @@ LRESULT CALLBACK myWindowProcedure(HWND windowHandle, UINT message, WPARAM wp, L
 		loadImages();
 		addMenus(windowHandle);
 		addControls(windowHandle);
+		displayDialogWindow(windowHandle);
 		break;
 	case WM_COMMAND:
 		switch (wp)
@@ -168,4 +175,54 @@ void loadImages()
 	gIconImage = (HBITMAP)LoadImageW(NULL, L"icon.bmp", IMAGE_BITMAP, 100, 100, LR_LOADFROMFILE);
 
 	gGenerateImage = (HBITMAP)LoadImage(NULL, L"button.bmp", IMAGE_BITMAP, 98, 38, LR_LOADFROMFILE);
+}
+
+void registerDialogWindowClass(HINSTANCE instance)
+{
+	WNDCLASSW dialogClass = { 0 };
+
+	dialogClass.hbrBackground = (HBRUSH)COLOR_WINDOW;
+	dialogClass.hCursor = LoadCursor(NULL, IDC_CROSS); // We'll use the cross cursor inside the dialog
+	dialogClass.hInstance = instance;
+	dialogClass.lpszClassName = L"MyDialogClass";
+	dialogClass.lpfnWndProc = dialogWindowProcedure;
+
+	RegisterClassW(&dialogClass);
+}
+
+void displayDialogWindow(HWND windowHandle)
+{
+	HWND dialogHandle = CreateWindowW(L"MyDialogClass", L"Dialog", WS_VISIBLE | WS_OVERLAPPEDWINDOW, 400, 400, 200, 200, windowHandle, NULL, NULL, NULL);
+
+	CreateWindowW(L"Button", L"Close", WS_VISIBLE | WS_CHILD | BS_TEXT, 20, 20, 100, 40, dialogHandle, (HMENU) DIALOG_CLOSE, NULL, NULL);
+
+	// Disabling the main window will make our dialog a "Modal" dialog. Not doing so
+	// will make our dialog a "Modeless" dialog
+	EnableWindow(windowHandle, FALSE);
+}
+
+LRESULT CALLBACK dialogWindowProcedure(HWND windowHandle, UINT message, WPARAM wp, LPARAM lp)
+{
+	switch (message)
+	{
+	case WM_COMMAND:
+		switch (wp)
+		{
+		case DIALOG_CLOSE:
+			// Our dialog is modal so re-enable the main window after the dialog is closed
+			EnableWindow(gMainWindow, TRUE);
+			// Then destroy the dialog. Note: If we destroy the dialog before enabling the main window, windows
+			// will enable the main window but will keep it in minimized mode for some reason
+			DestroyWindow(windowHandle);
+			break;
+		}
+
+		break;
+	case WM_CLOSE:
+		EnableWindow(gMainWindow, TRUE);
+		DestroyWindow(windowHandle);
+		break;
+	default:
+		return DefWindowProcW(windowHandle, message, wp, lp);
+	}
 }
